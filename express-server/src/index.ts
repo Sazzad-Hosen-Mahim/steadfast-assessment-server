@@ -1,6 +1,7 @@
 import express from "express";
 import axios from "axios";
 import cors from "cors";
+import https from "https";
 
 const app = express();
 
@@ -10,53 +11,54 @@ const allowedOrigins = [
   "https://steadfast-assessment-server.onrender.com",
 ];
 
-const corsOptions = {
-  origin: function (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void
-  ) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
-  exposedHeaders: ["Content-Length", "X-Request-ID"],
-};
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    exposedHeaders: ["Content-Length", "X-Request-ID"],
+  })
+);
 
-app.use(cors(corsOptions));
-
-app.options("*", cors(corsOptions));
+app.use((req, res, next) => {
+  res.header(
+    "Strict-Transport-Security",
+    "max-age=31536000; includeSubDomains"
+  );
+  next();
+});
 
 app.use(["/api", "/storage", "/uploads"], async (req, res) => {
   const targetUrl = `https://157.230.240.97:9999${req.originalUrl}`;
 
   try {
+    res.header({
+      "Access-Control-Allow-Origin": req.headers.origin || allowedOrigins[0],
+      "Access-Control-Allow-Credentials": "true",
+      Vary: "Origin",
+    });
+
     const response = await axios({
       url: targetUrl,
       method: req.method,
       responseType: "stream",
-      headers: {
-        ...req.headers,
-        host: "157.230.240.97:9999",
-
-        Origin:
-          req.headers.origin ||
-          "https://steadfast-assessment-server.onrender.com",
-      },
-
-      httpsAgent: new (require("https").Agent)({ rejectUnauthorized: false }),
+      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+      transformResponse: [
+        (data) => {
+          if (typeof data === "string") {
+            return data.replace(/http:\/\//g, "https://");
+          }
+          return data;
+        },
+      ],
     });
 
-    res.header({
-      "Access-Control-Allow-Origin": req.headers.origin || "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Access-Control-Allow-Credentials": "true",
-      "Access-Control-Expose-Headers": "Content-Length, X-Request-ID",
+    Object.entries(response.headers).forEach(([key, value]) => {
+      if (
+        !["content-length", "transfer-encoding"].includes(key.toLowerCase())
+      ) {
+        res.setHeader(key, value);
+      }
     });
 
     response.data.pipe(res);

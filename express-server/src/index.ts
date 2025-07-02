@@ -5,26 +5,26 @@ import cors from "cors";
 const app = express();
 app.use(cors());
 
-app.use("/api", async (req, res) => {
+app.use(["/api", "/storage", "/uploads"], async (req, res) => {
   const targetUrl = `http://157.230.240.97:9999${req.originalUrl}`;
   try {
-    const { data } = await axios.get(targetUrl, {
+    const response = await axios({
+      url: targetUrl,
+      method: req.method,
+      responseType: "stream",
       headers: {
-        "User-Agent": "Mozilla/5.0",
-        Accept: "application/json",
+        ...req.headers,
+        host: "157.230.240.97:9999",
       },
     });
-    res.json(data);
+    response.data.pipe(res);
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error(
-        "Proxy fetch error:",
-        error.response?.data || error.message || error
-      );
+    if (error instanceof Error) {
+      console.error("Proxy error:", error.message);
     } else {
-      console.error("Proxy fetch error:", error);
+      console.error("Proxy error:", error);
     }
-    res.status(500).json({ error: "Failed to fetch data" });
+    res.status(500).send("Error proxying request");
   }
 });
 

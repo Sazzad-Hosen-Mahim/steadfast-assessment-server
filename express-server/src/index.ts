@@ -3,28 +3,19 @@ import axios from "axios";
 import cors from "cors";
 
 const app = express();
+
 const allowedOrigins = [
   "http://localhost:5173",
   "https://falcon-nexus.netlify.app",
   "https://steadfast-assessment-server.onrender.com",
 ];
 
-interface CorsOptions {
+const corsOptions = {
   origin: (
     origin: string | undefined,
     callback: (err: Error | null, allow?: boolean) => void
-  ) => void;
-  credentials: boolean;
-  methods: string[];
-  allowedHeaders: string[];
-}
-
-const corsOptions: CorsOptions = {
-  origin: function (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void
-  ) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+  ) => {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -40,7 +31,8 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 
 app.use(["/api", "/storage", "/uploads"], async (req, res) => {
-  const targetUrl = `http://157.230.240.97:9999${req.originalUrl}`;
+  const targetUrl = `https://steadfast-assessment-server.onrender.com${req.originalUrl}`;
+
   try {
     const response = await axios({
       url: targetUrl,
@@ -48,18 +40,24 @@ app.use(["/api", "/storage", "/uploads"], async (req, res) => {
       responseType: "stream",
       headers: {
         ...req.headers,
-        host: "157.230.240.97:9999",
+        host: "steadfast-assessment-server.onrender.com",
       },
     });
+
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, DELETE, OPTIONS"
+    );
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.header("Access-Control-Allow-Credentials", "true");
+
     response.data.pipe(res);
   } catch (error) {
-    if (error instanceof Error) {
-      console.error("Proxy error:", error.message);
-    } else {
-      console.error("Proxy error:", error);
-    }
+    console.error("Proxy error:", error);
     res.status(500).send("Error proxying request");
   }
 });
 
-app.listen(3000, () => console.log("Proxy running on http://localhost:3000"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Proxy running on port ${PORT}`));

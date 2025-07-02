@@ -3,7 +3,17 @@ import axios from "axios";
 import cors from "cors";
 
 const app = express();
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://your-netlify-site.netlify.app",
+      "https://steadfast-assessment-server.onrender.com",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(["/api", "/storage", "/uploads"], async (req, res) => {
   const targetUrl = `http://157.230.240.97:9999${req.originalUrl}`;

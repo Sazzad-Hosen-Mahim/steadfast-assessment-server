@@ -1,0 +1,21 @@
+{
+  "name": "express-server",
+  "version": "1.0.0",
+  "description": "A simple Express server that acts as a proxy to fetch data from a specified target URL.",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "node src/index.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "node-fetch": "^2.6.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "typescript": "^4.5.4",
+    "ts-node": "^10.4.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
